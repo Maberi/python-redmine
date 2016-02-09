@@ -22,6 +22,7 @@ from .exceptions import (
     ForbiddenError,
     JSONDecodeError
 )
+import re
 
 
 class Redmine(object):
@@ -38,6 +39,7 @@ class Redmine(object):
         self.datetime_format = kwargs.get('datetime_format', '%Y-%m-%dT%H:%M:%SZ')
         self.raise_attr_exception = kwargs.get('raise_attr_exception', True)
         self.custom_resource_paths = kwargs.get('custom_resource_paths', None)
+        self.sesion = requests.Session()
 
     def __getattr__(self, resource):
         """Returns either ResourceSet or Resource object depending on the method used on the ResourceManager"""
@@ -113,10 +115,10 @@ class Redmine(object):
         # We would like to be authenticated by API key by default
         if 'key' not in kwargs['params'] and self.key is not None:
             kwargs['params']['key'] = self.key
-        else:
-            kwargs['auth'] = (self.username, self.password)
+        elif '_redmine_session' not in self.sesion.cookies:
+            self._do_login()
 
-        response = getattr(requests, method)(url, **kwargs)
+        response = self.sesion.request(method, url, **kwargs)
 
         if response.status_code in (200, 201):
             if raw_response:
@@ -147,3 +149,21 @@ class Redmine(object):
             raise ServerError
 
         raise UnknownError(response.status_code)
+
+    def _do_login(self):
+        """Hace el login en el redmine para tener sesión
+        """
+        response = self.sesion.get('{0}/my/account'.format(self.url))
+        if b'<div id="login-form">' not in response.content or self.username is None:
+            return
+        auth_token = re.search(rb'name="authenticity_token"[^>]*value="([^"]+)"', response.content).group(1)
+        back_url = re.search(rb'name="back_url"[^>]*value="([^"]+)"', response.content).group(1)
+        response = self.sesion.post('{0}/login'.format(self.url), data={
+            'authenticity_token': auth_token,
+            'back_url': back_url,
+            'username': self.username,
+            'password': self.password
+        })
+        if b'<div class="flash error">' in response.content:
+            raise AuthError
+
