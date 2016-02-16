@@ -33,13 +33,15 @@ class Redmine(object):
         self.ver = kwargs.get('version', None)
         self.username = kwargs.get('username', None)
         self.password = kwargs.get('password', None)
-        self.requests = kwargs.get('requests', {})
+        self.requests = kwargs.get('requests', {'timeout': 30.0})
         self.impersonate = kwargs.get('impersonate', None)
         self.date_format = kwargs.get('date_format', '%Y-%m-%d')
         self.datetime_format = kwargs.get('datetime_format', '%Y-%m-%dT%H:%M:%SZ')
         self.raise_attr_exception = kwargs.get('raise_attr_exception', True)
         self.custom_resource_paths = kwargs.get('custom_resource_paths', None)
         self.sesion = requests.Session()
+        self.sesion.mount('http://', requests.adapters.HTTPAdapter(max_retries=5))
+        self.sesion.mount('https://', requests.adapters.HTTPAdapter(max_retries=5))
 
     def __getattr__(self, resource):
         """Returns either ResourceSet or Resource object depending on the method used on the ResourceManager"""
