@@ -33,7 +33,7 @@ class Redmine(object):
         self.ver = kwargs.get('version', None)
         self.username = kwargs.get('username', None)
         self.password = kwargs.get('password', None)
-        self.requests = kwargs.get('requests', {'timeout': 30.0})
+        self.requests = kwargs.get('requests', {'timeout': 60.0})
         self.impersonate = kwargs.get('impersonate', None)
         self.date_format = kwargs.get('date_format', '%Y-%m-%d')
         self.datetime_format = kwargs.get('datetime_format', '%Y-%m-%dT%H:%M:%SZ')
